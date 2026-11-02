@@ -1,0 +1,111 @@
+@import "tailwindcss";
+@import "@fontsource/momo-trust-sans/400.css";
+@import "@fontsource/momo-trust-sans/500.css";
+@import "@fontsource/momo-trust-sans/600.css";
+
+@font-face {
+  font-family: "Geist Pixel";
+  src: url("../../node_modules/geist/dist/fonts/geist-pixel/GeistPixel-Square.woff2") format("woff2");
+  font-display: swap;
+}
+
+@theme {
+  --font-pixel: "Geist Pixel", ui-monospace, monospace;
+  --font-sans: "Momo Trust Sans", ui-sans-serif, system-ui, sans-serif;
+  --color-bg: #0a0a0a;
+  --color-panel: #111111;
+  --color-line: #1f1f1f;
+  --color-line-strong: #333333;
+  --color-fg: #ededed;
+  --color-muted: #7a7a7a;
+  --color-accent: #b6f23a;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  background: var(--color-bg);
+  color: var(--color-fg);
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: #000;
+}
+
+@layer components {
+  .label {
+    @apply font-pixel text-[11px] uppercase tracking-widest text-muted;
+  }
+  .pill {
+    @apply cursor-pointer rounded-full border border-line-strong px-3 py-1 text-xs text-muted transition-colors;
+    @apply hover:border-fg hover:text-fg;
+  }
+  .pill[aria-pressed="true"] {
+    @apply border-fg bg-fg text-bg;
+  }
+  .field {
+    @apply w-full rounded-md border border-line-strong bg-transparent px-3 py-2 text-sm text-fg outline-none transition-colors;
+    @apply placeholder:text-muted focus:border-fg;
+  }
+  .tag {
+    @apply rounded border border-line px-1.5 py-0.5 text-[11px] text-muted;
+  }
+  .tab {
+    @apply cursor-pointer rounded-md border border-line-strong px-3 py-1 text-xs text-muted transition-colors hover:text-fg;
+  }
+  .tab[aria-pressed="true"] {
+    @apply border-fg text-fg;
+  }
+  .tag-flag {
+    @apply rounded border border-red-500/40 bg-red-500/10 px-1.5 py-0.5 text-[11px] text-red-400;
+  }
+}
+
+
+/* ───── Printing (CV / cover letter) ───── */
+#print-root { display: none; }
+
+@page { size: A4; margin: 16mm 18mm; }
+
+@media print {
+  html, body { background: #fff !important; color: #111 !important; }
+  body > *:not(#print-root) { display: none !important; }
+  #print-root { display: block; }
+
+  .doc {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 10pt;
+    line-height: 1.42;
+    color: #111;
+  }
+  .doc h1 { margin: 0 0 3pt; font-size: 21pt; font-weight: 600; letter-spacing: -0.01em; line-height: 1.15; }
+  .doc h1 + p { margin: 0 0 4pt; font-size: 9pt; color: #444; }
+  .doc h2 {
+    margin: 13pt 0 5pt;
+    padding-bottom: 2pt;
+    border-bottom: 0.75pt solid #aaa;
+    font-size: 8.5pt;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #333;
+    break-after: avoid;
+  }
+  .doc p { margin: 0 0 4pt; }
+  .doc .entry { display: flex; justify-content: space-between; gap: 12pt; margin: 8pt 0 2pt; break-after: avoid; }
+  .doc .entry .when { flex: none; color: #555; font-size: 9pt; white-space: nowrap; }
+  .doc ul { margin: 0 0 4pt; padding-left: 13pt; }
+  .doc li { margin: 1.5pt 0; padding-left: 2pt; break-inside: avoid; }
+  .doc strong { font-weight: 600; }
+
+  .doc.letter { font-size: 11pt; line-height: 1.6; }
+  .doc.letter p { margin: 0 0 11pt; orphans: 3; widows: 3; }
+}

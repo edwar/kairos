@@ -1,0 +1,603 @@
+---
+import '../styles/global.css';
+import { COUNTRIES, CONTRACTS, LANGUAGES, MODALITIES, SENIORITIES } from '../lib/types.ts';
+
+export const prerender = true;
+
+const pills = (group: string, opts: Record<string, string>, withNone = false) => [
+  ...Object.entries(opts).map(([value, label]) => ({ group, value, label })),
+  ...(withNone ? [{ group, value: 'none', label: 'Sin especificar' }] : []),
+];
+---
+
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>kairos — ofertas frontend</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%230a0a0a'/><rect x='3' y='3' width='4' height='4' fill='%23b6f23a'/></svg>" />
+  </head>
+  <body class="min-h-screen">
+    <header class="mx-auto flex max-w-6xl items-baseline justify-between px-5 pt-8 pb-6">
+      <h1 class="font-pixel text-2xl tracking-tight">kairos<span class="text-accent">_</span></h1>
+      <p id="status" class="label text-right"></p>
+    </header>
+
+    <main class="mx-auto grid max-w-6xl gap-10 px-5 pb-24 md:grid-cols-[250px_1fr]">
+      <aside class="space-y-7 md:sticky md:top-6 md:max-h-[calc(100vh-3rem)] md:self-start md:overflow-y-auto md:overscroll-contain md:pr-3 md:pb-6 [scrollbar-width:thin] [scrollbar-color:#333_transparent]">
+        <form id="search" class="space-y-5">
+          <div class="space-y-2">
+            <label class="label" for="q">Búsqueda</label>
+            <input id="q" name="q" class="field" value="frontend" maxlength="60" autocomplete="off" />
+          </div>
+
+          <fieldset class="space-y-2">
+            <legend class="label">Países</legend>
+            <div class="flex flex-wrap gap-1.5" data-multi="countries">
+              {pills('countries', COUNTRIES).map((p) => (
+                <button type="button" class="pill" data-value={p.value} aria-pressed="false">{p.label}</button>
+              ))}
+            </div>
+          </fieldset>
+
+          <fieldset class="space-y-2">
+            <legend class="label">Publicadas en</legend>
+            <div class="flex flex-wrap gap-1.5" data-single="days">
+              <button type="button" class="pill" data-value="1" aria-pressed="false">24 h</button>
+              <button type="button" class="pill" data-value="7" aria-pressed="true">7 días</button>
+              <button type="button" class="pill" data-value="15" aria-pressed="false">15 días</button>
+              <button type="button" class="pill" data-value="30" aria-pressed="false">30 días</button>
+            </div>
+          </fieldset>
+
+          <button type="submit" id="go" class="w-full rounded-md bg-fg py-2 font-pixel text-sm text-bg transition-opacity hover:opacity-85 disabled:opacity-40">
+            buscar →
+          </button>
+        </form>
+
+        <hr class="border-line" />
+
+        <div class="space-y-2" id="cv-box">
+          <p class="label text-fg">Mi CV</p>
+          <p id="cv-status" class="text-xs text-muted"></p>
+          <div class="flex items-center gap-3">
+            <label class="cursor-pointer rounded-full border border-line-strong px-3 py-1 text-xs text-muted transition-colors hover:border-fg hover:text-fg">
+              <input id="cv-file" type="file" accept="application/pdf" class="sr-only" />
+              <span id="cv-label">subir PDF</span>
+            </label>
+            <button type="button" id="cv-clear" class="hidden text-xs text-muted underline-offset-4 hover:text-fg hover:underline">quitar</button>
+          </div>
+          <p class="text-[11px] leading-snug text-muted">Se guarda solo en tu navegador. Al adaptar una oferta se envía el texto a Groq, sin email, teléfono ni enlaces.</p>
+        </div>
+
+        <hr class="border-line" />
+
+        <div class="space-y-5" id="view-filters">
+          <p class="label text-fg">Filtrar resultados</p>
+
+          <fieldset class="space-y-2">
+            <legend class="label">Modalidad</legend>
+            <div class="flex flex-wrap gap-1.5" data-multi="modality">
+              {pills('modality', MODALITIES, true).map((p) => <button type="button" class="pill" data-value={p.value} aria-pressed="false">{p.label}</button>)}
+            </div>
+          </fieldset>
+
+          <fieldset class="space-y-2">
+            <legend class="label">Contrato</legend>
+            <div class="flex flex-wrap gap-1.5" data-multi="contract">
+              {pills('contract', CONTRACTS, true).map((p) => <button type="button" class="pill" data-value={p.value} aria-pressed="false">{p.label}</button>)}
+            </div>
+          </fieldset>
+
+          <fieldset class="space-y-2">
+            <legend class="label">Idioma de la oferta</legend>
+            <div class="flex flex-wrap gap-1.5" data-multi="language">
+              {pills('language', LANGUAGES, true).map((p) => <button type="button" class="pill" data-value={p.value} aria-pressed="false">{p.label}</button>)}
+            </div>
+          </fieldset>
+
+          <fieldset class="space-y-2">
+            <legend class="label">Nivel</legend>
+            <div class="flex flex-wrap gap-1.5" data-multi="seniority">
+              {pills('seniority', SENIORITIES, true).map((p) => <button type="button" class="pill" data-value={p.value} aria-pressed="false">{p.label}</button>)}
+            </div>
+          </fieldset>
+
+          <fieldset class="space-y-2">
+            <legend class="label">Stack</legend>
+            <div id="stack-pills" class="flex flex-wrap gap-1.5" data-multi="stack">
+              <span class="text-xs text-muted">aparece al buscar</span>
+            </div>
+          </fieldset>
+
+          <fieldset class="space-y-2">
+            <legend class="label">Otros</legend>
+            <div class="flex flex-wrap gap-1.5" data-multi="flags">
+              <button type="button" class="pill" data-value="salary" aria-pressed="false">Con sueldo</button>
+              <button type="button" class="pill" data-value="stack" aria-pressed="false">Stack indicado</button>
+              <button type="button" class="pill" data-value="redflags" aria-pressed="false">Con red flags</button>
+              <button type="button" class="pill" data-value="clean" aria-pressed="false">Sin red flags</button>
+              <button type="button" id="sort-match" class="pill hidden" data-value="bymatch" aria-pressed="false">Más compatibles primero</button>
+            </div>
+          </fieldset>
+
+          <div class="space-y-2">
+            <label class="label" for="text">Texto en resultados</label>
+            <input id="text" class="field" placeholder="empresa, ciudad…" autocomplete="off" />
+          </div>
+
+          <button type="button" id="reset" class="text-xs text-muted underline-offset-4 hover:text-fg hover:underline">limpiar filtros</button>
+        </div>
+      </aside>
+
+      <section>
+        <div class="mb-3 flex items-center justify-between">
+          <p id="count" class="label"></p>
+          <div id="sources" class="flex flex-wrap justify-end gap-x-3 gap-y-1"></div>
+        </div>
+        <p id="hidden" class="mb-3 hidden text-xs text-muted"></p>
+        <ul id="results" class="divide-y divide-line border-y border-line"></ul>
+        <p id="empty" class="hidden py-16 text-center text-sm text-muted"></p>
+      </section>
+    </main>
+
+    <div id="print-root" aria-hidden="true"></div>
+
+    <dialog id="tailor" class="m-auto w-[min(860px,94vw)] rounded-lg border border-line-strong bg-panel p-0 text-fg backdrop:bg-black/70">
+      <div class="no-print flex items-start justify-between gap-4 border-b border-line p-4">
+        <div class="min-w-0">
+          <p class="label">Adaptar a la oferta</p>
+          <h3 id="tailor-title" class="mt-1 truncate text-sm"></h3>
+          <div class="mt-3 flex gap-2">
+            <button type="button" class="tab" data-tab="cv" aria-pressed="true">CV</button>
+            <button type="button" class="tab" data-tab="letter" aria-pressed="false">Carta de presentación</button>
+          </div>
+        </div>
+        <button type="button" id="tailor-close" class="shrink-0 text-xs text-muted hover:text-fg">cerrar ✕</button>
+      </div>
+      <div id="tailor-body" class="max-h-[72vh] overflow-y-auto p-5"></div>
+      <div id="tailor-actions" class="no-print hidden gap-2 border-t border-line p-4">
+        <button type="button" id="tailor-copy" class="rounded-md bg-fg px-3 py-1.5 font-pixel text-xs text-bg hover:opacity-85">copiar</button>
+        <button type="button" id="tailor-print" class="rounded-md border border-line-strong px-3 py-1.5 font-pixel text-xs text-fg hover:border-fg">imprimir / guardar PDF</button>
+      </div>
+    </dialog>
+
+    <script>
+      import { COUNTRIES, CONTRACTS, MODALITIES, SENIORITIES, SOURCE_COUNTRIES } from '../lib/types.ts';
+      import type { Job, SearchResponse, Source, CountryCode } from '../lib/types.ts';
+      import { matchJob, profileFromCv } from '../lib/match.ts';
+      import type { CvProfile, Match } from '../lib/match.ts';
+
+      const $ = <T extends HTMLElement>(s: string) => document.querySelector<T>(s)!;
+      const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+
+      // ───── state ─────
+      type Multi = 'countries' | 'modality' | 'contract' | 'language' | 'seniority' | 'stack' | 'flags';
+      const state: Record<Multi, Set<string>> & { days: string; q: string; text: string } = {
+        countries: new Set(['MX', 'CO']),
+        modality: new Set(), contract: new Set(), language: new Set(),
+        seniority: new Set(), stack: new Set(), flags: new Set(),
+        days: '7', q: 'frontend', text: '',
+      };
+      let jobs: Job[] = [];
+      const STORE = 'kairos:v1';
+
+      function save() {
+        const o: Record<string, unknown> = { days: state.days, q: state.q };
+        o.countries = [...state.countries]; // view filters are intentionally not persisted
+        localStorage.setItem(STORE, JSON.stringify(o));
+      }
+      function load() {
+        try {
+          const o = JSON.parse(localStorage.getItem(STORE) ?? '{}');
+          if (Array.isArray(o.countries)) state.countries = new Set(o.countries.filter((c: string) => c in COUNTRIES)); // drop countries that no longer exist
+          if (o.days) state.days = o.days;
+          if (o.q) state.q = o.q;
+        } catch {}
+      }
+
+      function syncPills() {
+        document.querySelectorAll<HTMLElement>('[data-multi]').forEach((g) => {
+          const set = state[g.dataset.multi as Multi];
+          g.querySelectorAll<HTMLElement>('.pill').forEach((p) => p.setAttribute('aria-pressed', String(set.has(p.dataset.value!))));
+        });
+        document.querySelectorAll<HTMLElement>('[data-single="days"] .pill').forEach((p) => p.setAttribute('aria-pressed', String(p.dataset.value === state.days)));
+        $<HTMLInputElement>('#q').value = state.q;
+      }
+
+      // ───── rendering ─────
+      const rtf = new Intl.RelativeTimeFormat('es', { numeric: 'auto' });
+      function ago(iso: string | null) {
+        if (!iso) return '';
+        const d = (Date.now() - new Date(iso).getTime()) / 86_400_000;
+        if (d < 1) return 'hoy';
+        return rtf.format(-Math.round(d), 'day');
+      }
+
+      function passes(j: Job) {
+        // Unknown (null) values pass when real values are selected; 'none' shows only unknowns.
+        const any = (set: Set<string>, v: string | null) => {
+          if (set.size === 0) return true;
+          if (set.has('none')) return v === null;
+          return v === null || set.has(v);
+        };
+        if (!any(state.modality, j.modality)) return false;
+        if (!any(state.contract, j.contract)) return false;
+        if (!any(state.language, j.language)) return false;
+        if (!any(state.seniority, j.seniority)) return false;
+        if (state.stack.size && !j.stack.some((s) => state.stack.has(s))) return false;
+        if (state.flags.has('salary') && !j.salary) return false;
+        if (state.flags.has('stack') && j.stack.length === 0) return false;
+        const nFlags = j.redFlags?.length ?? 0;
+        if (state.flags.has('redflags') && nFlags === 0) return false;
+        if (state.flags.has('clean') && nFlags > 0) return false;
+        if (state.text) {
+          const hay = `${j.title} ${j.company ?? ''} ${j.location ?? ''}`.toLowerCase();
+          if (!hay.includes(state.text.toLowerCase())) return false;
+        }
+        return true;
+      }
+
+      function renderStackPills() {
+        const counts = new Map<string, number>();
+        jobs.forEach((j) => j.stack.forEach((s) => counts.set(s, (counts.get(s) ?? 0) + 1)));
+        const top = [...counts].sort((a, b) => b[1] - a[1]).slice(0, 14);
+        const box = $('#stack-pills');
+        if (!top.length) return;
+        box.innerHTML = top
+          .map(([s, n]) => `<button type="button" class="pill" data-value="${esc(s)}" aria-pressed="${state.stack.has(s)}">${esc(s)} <span class="opacity-50">${n}</span></button>`)
+          .join('');
+      }
+
+      function matchBadge(m?: Match) {
+        if (!m) return '';
+        if (m.score === null) return '<span class="font-pixel text-xs text-line-strong" title="La oferta no indica tecnologías para comparar">compat. —</span>';
+        const tone = m.score >= 75 ? 'text-accent' : m.score >= 50 ? 'text-fg' : 'text-muted';
+        const tip = `Estimación según tecnologías y años de experiencia${m.missing.length ? `. Te faltan: ${m.missing.join(', ')}` : ''}`;
+        return `<span class="font-pixel text-xs ${tone}" title="${esc(tip)}">${m.score}% compatible</span>`;
+      }
+      function matchDetail(m?: Match) {
+        if (!m || m.score === null) return '';
+        const parts = [
+          m.matched.length ? `<span class="text-accent/80">✓ ${esc(m.matched.slice(0, 6).join(', '))}</span>` : '',
+          m.missing.length ? `✗ ${esc(m.missing.slice(0, 4).join(', '))}` : '',
+          m.experience ? esc(m.experience) : '',
+        ].filter(Boolean);
+        return parts.length ? `<p class="mt-1.5 text-[11px] text-muted">${parts.join(' · ')}</p>` : '';
+      }
+
+      function render() {
+        const byDate = (a: Job, b: Job) => (b.postedAt ?? '').localeCompare(a.postedAt ?? '');
+        const matches = new Map<string, Match>();
+        if (profile) jobs.forEach((j) => matches.set(j.id, matchJob(j, profile!)));
+        const sortByMatch = Boolean(profile) && state.flags.has('bymatch');
+        const list = jobs.filter(passes).sort((a, b) =>
+          sortByMatch ? (matches.get(b.id)?.score ?? -1) - (matches.get(a.id)?.score ?? -1) || byDate(a, b) : byDate(a, b));
+        $('#count').textContent = jobs.length ? `${list.length} de ${jobs.length} ofertas` : '';
+        const GROUPS: Record<string, string> = { modality: 'Modalidad', contract: 'Contrato', language: 'Idioma', seniority: 'Nivel', stack: 'Stack', flags: 'Otros' };
+        const active = Object.keys(GROUPS).filter((k) => state[k as Multi].size).map((k) => GROUPS[k]);
+        if (state.text) active.push('Texto');
+        const hidden = jobs.length - list.length;
+        const note = $('#hidden');
+        note.classList.toggle('hidden', !(hidden > 0 && active.length));
+        note.innerHTML = `${hidden} ocultas por filtros (${active.join(', ')}) · <button type="button" id="show-all" class="underline underline-offset-4 hover:text-fg">mostrar todas</button>`;
+        const ul = $('#results');
+        ul.innerHTML = list
+          .map((j) => {
+            const meta = [j.company, j.location, COUNTRIES[j.country]].filter(Boolean).map((x) => esc(x!)).join(' · ');
+            const tags = [
+              j.modality && MODALITIES[j.modality],
+              j.contract && CONTRACTS[j.contract],
+              j.seniority && SENIORITIES[j.seniority],
+              ...j.stack.slice(0, 5),
+            ].filter(Boolean).map((t) => `<span class="tag">${esc(String(t))}</span>`).join('');
+            const flags = (j.redFlags ?? []).map((f) => `<span class="tag-flag" title="Posible señal de alerta">⚑ ${esc(f)}</span>`).join('');
+            return `<li>
+              <a href="${esc(j.url)}" target="_blank" rel="noopener noreferrer" class="group grid gap-x-6 gap-y-2 py-4 sm:grid-cols-[1fr_auto]">
+                <div class="min-w-0">
+                  <h2 class="truncate text-[15px] font-medium transition-colors group-hover:text-accent">${esc(j.title)}</h2>
+                  <p class="mt-0.5 truncate text-sm text-muted">${meta}</p>
+                  <div class="mt-2 flex flex-wrap gap-1">${flags}${tags}</div>
+                  ${matchDetail(matches.get(j.id))}
+                </div>
+                <div class="flex items-baseline gap-4 text-right sm:flex-col sm:items-end sm:gap-1">
+                  ${matchBadge(matches.get(j.id))}
+                  <span class="font-pixel text-sm ${j.salary ? 'text-fg' : 'text-line-strong'}">${j.salary ? esc(j.salary) : '—'}</span>
+                  <span class="label">${esc(ago(j.postedAt))} · ${j.source}</span>
+                </div>
+              </a>
+              ${cv ? `<div class="-mt-2 pb-3"><button type="button" data-tailor="${esc(j.id)}" class="text-xs text-muted underline-offset-4 transition-colors hover:text-accent hover:underline">adaptar CV y carta →</button></div>` : ''}
+            </li>`;
+          })
+          .join('');
+        const empty = $('#empty');
+        empty.classList.toggle('hidden', list.length > 0);
+        if (!list.length && jobs.length) empty.textContent = 'Ningún resultado con estos filtros.';
+        else if (!list.length) empty.textContent = 'Elige países y pulsa buscar.';
+      }
+
+      // ───── fetching ─────
+      function sourceChip(id: string, label: string, st: 'load' | 'ok' | 'err', detail = '') {
+        let el = document.getElementById(id);
+        if (!el) { el = document.createElement('span'); el.id = id; $('#sources').append(el); }
+        const color = st === 'ok' ? 'text-accent' : st === 'err' ? 'text-red-400' : 'text-muted animate-pulse';
+        el.className = `label ${color}`;
+        el.title = detail;
+        el.textContent = `${st === 'ok' ? '●' : st === 'err' ? '✕' : '○'} ${label}${st === 'ok' ? ` ${detail}` : ''}`;
+      }
+
+      async function search() {
+        const countries = [...state.countries] as CountryCode[];
+        if (!countries.length) { $('#status').textContent = 'elige al menos un país'; return; }
+        state.q = $<HTMLInputElement>('#q').value.trim() || 'frontend';
+        save();
+
+        const targets = (Object.keys(SOURCE_COUNTRIES) as Source[]).flatMap((s) =>
+          countries.filter((c) => SOURCE_COUNTRIES[s].includes(c)).map((c) => ({ s, c })),
+        );
+
+        jobs = [];
+        $('#sources').innerHTML = '';
+        $('#results').innerHTML = '';
+        $('#empty').classList.add('hidden');
+        $<HTMLButtonElement>('#go').disabled = true;
+        let pending = targets.length;
+        $('#status').textContent = `consultando ${pending} fuentes…`;
+
+        await Promise.all(
+          targets.map(async ({ s, c }) => {
+            const id = `src-${s}-${c}`;
+            const label = `${s} ${c}`;
+            sourceChip(id, label, 'load');
+            try {
+              const r = await fetch(`/api/search?${new URLSearchParams({ source: s, country: c, q: state.q, days: state.days })}`);
+              const data = (await r.json()) as SearchResponse & { error?: string };
+              if (!r.ok) throw new Error(data.error ?? `HTTP ${r.status}`);
+              // Dedupe by id and by title+company: the same offer can show up in more than one source.
+              const norm = (x: string | null) => (x ?? '').toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '');
+              const dupKey = (j: Job) => `${norm(j.title)}|${norm(j.company)}`;
+              const seen = new Set(jobs.flatMap((j) => [j.id, dupKey(j)]));
+              jobs.push(...data.jobs.filter((j) => {
+                if (seen.has(j.id) || seen.has(dupKey(j))) return false;
+                seen.add(j.id); seen.add(dupKey(j));
+                return true;
+              }));
+              sourceChip(id, label, 'ok', `${data.jobs.length}${data.cached ? ' ⚡' : ''}`);
+            } catch (e) {
+              sourceChip(id, label, 'err', (e as Error).message);
+            } finally {
+              pending--;
+              $('#status').textContent = pending ? `consultando ${pending} fuentes…` : 'listo';
+              renderStackPills();
+              render();
+            }
+          }),
+        );
+        $<HTMLButtonElement>('#go').disabled = false;
+      }
+
+      // ───── events ─────
+      document.addEventListener('click', (e) => {
+        const pill = (e.target as HTMLElement).closest<HTMLElement>('.pill');
+        if (!pill) return;
+        const group = pill.parentElement!;
+        const v = pill.dataset.value!;
+        if (group.dataset.single === 'days') {
+          state.days = v;
+        } else if (group.dataset.multi) {
+          const set = state[group.dataset.multi as Multi];
+          const wasOn = set.has(v);
+          if (['modality', 'contract', 'language', 'seniority'].includes(group.dataset.multi)) {
+            // 'none' is exclusive with concrete values
+            if (v === 'none') set.clear(); else set.delete('none');
+          }
+          if (group.dataset.multi === 'flags' && !wasOn) {
+            // "con" and "sin" red flags are mutually exclusive
+            if (v === 'redflags') set.delete('clean');
+            if (v === 'clean') set.delete('redflags');
+          }
+          wasOn ? set.delete(v) : set.add(v);
+          syncPills();
+        }
+        pill.setAttribute('aria-pressed', String(group.dataset.single ? true : state[group.dataset.multi as Multi].has(v)));
+        if (group.dataset.single) syncPills();
+        save();
+        // country / date changes need a new fetch (on submit); everything else is instant.
+        if (!['countries'].includes(group.dataset.multi ?? '') && !group.dataset.single) render();
+      });
+
+      $('#search').addEventListener('submit', (e) => { e.preventDefault(); search(); });
+      $<HTMLInputElement>('#text').addEventListener('input', (e) => { state.text = (e.target as HTMLInputElement).value; render(); });
+      function resetFilters() {
+        for (const k of ['modality', 'contract', 'language', 'seniority', 'stack', 'flags'] as Multi[]) state[k].clear();
+        state.text = '';
+        $<HTMLInputElement>('#text').value = '';
+        syncPills(); renderStackPills(); save(); render();
+      }
+      $('#reset').addEventListener('click', resetFilters);
+      document.addEventListener('click', (e) => { if ((e.target as HTMLElement).id === 'show-all') resetFilters(); });
+
+      // ───── CV ─────
+      const CV_KEY = 'kairos:cv';
+      type Cv = { name: string; text: string };
+      let cv: Cv | null = null;
+      try { cv = JSON.parse(localStorage.getItem(CV_KEY) ?? 'null'); } catch {}
+
+      let profile: CvProfile | null = null;
+
+      function renderCv() {
+        profile = cv ? profileFromCv(cv.text) : null;
+        $('#sort-match').classList.toggle('hidden', !cv);
+        $('#cv-status').textContent = cv ? `${cv.name} · ${cv.text.length.toLocaleString('es')} caracteres` : 'Sube tu CV en PDF para adaptarlo a cada oferta.';
+        $('#cv-clear').classList.toggle('hidden', !cv);
+        $('#cv-label').textContent = cv ? 'cambiar PDF' : 'subir PDF';
+      }
+
+      $<HTMLInputElement>('#cv-file').addEventListener('change', async (e) => {
+        const input = e.target as HTMLInputElement;
+        const file = input.files?.[0];
+        if (!file) return;
+        $('#cv-status').textContent = 'leyendo PDF…';
+        try {
+          const fd = new FormData();
+          fd.append('file', file);
+          const r = await fetch('/api/cv', { method: 'POST', body: fd });
+          const data = await r.json();
+          if (!r.ok) throw new Error(data.error ?? `HTTP ${r.status}`);
+          cv = { name: data.name, text: data.text };
+          localStorage.setItem(CV_KEY, JSON.stringify(cv));
+          results.clear();
+        } catch (err) {
+          $('#cv-status').textContent = `Error: ${(err as Error).message}`;
+          input.value = '';
+          return;
+        }
+        input.value = '';
+        renderCv(); render();
+      });
+      $('#cv-clear').addEventListener('click', () => { cv = null; localStorage.removeItem(CV_KEY); results.clear(); renderCv(); render(); });
+
+      function mdToHtml(md: string) {
+        const inline = (t: string) => esc(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        const out: string[] = [];
+        let list = false;
+        const close = () => { if (list) { out.push('</ul>'); list = false; } };
+        for (const line of md.split('\n')) {
+          if (/^# /.test(line)) { close(); out.push(`<h1 class="text-xl font-medium">${inline(line.slice(2))}</h1>`); }
+          else if (/^## /.test(line)) { close(); out.push(`<h2 class="mt-5 mb-2 border-b border-line-strong pb-1 font-pixel text-[11px] uppercase tracking-widest">${inline(line.slice(3))}</h2>`); }
+          else if (/^- /.test(line)) { if (!list) { out.push('<ul class="ml-5 list-disc space-y-1 text-sm">'); list = true; } out.push(`<li>${inline(line.slice(2))}</li>`); }
+          else if (line.trim()) { close(); out.push(`<p class="mt-2 text-sm">${inline(line)}</p>`); }
+          else close();
+        }
+        close();
+        return out.join('');
+      }
+
+      const chips = (items: string[], cls: string) => items.map((t) => `<span class="${cls}">${esc(t)}</span>`).join('');
+
+      type Kind = 'cv' | 'letter';
+      let curId = '';
+      let curKind: Kind = 'cv';
+      let currentText = '';
+      const results = new Map<string, any>(); // `${kind}:${jobId}` → response
+      const cacheKey = (k: Kind, id: string) => `${k}:${id}`;
+
+      function setTabs() {
+        document.querySelectorAll<HTMLElement>('[data-tab]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tab === curKind)));
+      }
+      const setActions = (on: boolean) => {
+        $('#tailor-actions').classList.toggle('hidden', !on);
+        $('#tailor-actions').classList.toggle('flex', on);
+      };
+
+      function showResult(kind: Kind, t: any) {
+        currentText = kind === 'cv' ? t.cv : t.letter;
+        const gaps: string[] = t.gaps ?? [];
+        const keywords: string[] = t.keywords ?? [];
+        const advice = kind === 'cv'
+          ? 'Revísalo antes de enviarlo: solo reordena y reformula lo que ya está en tu CV'
+          : 'Revísala y personalízala antes de enviarla (por ejemplo, con el nombre de quien recibe tu candidatura). Solo usa lo que ya está en tu CV';
+        const content = kind === 'cv'
+          ? mdToHtml(t.cv)
+          : `<div class="space-y-4 text-sm leading-relaxed">${String(t.letter).split(/\n\n+/).map((p) => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join('')}</div>`;
+        $('#tailor-body').innerHTML = `
+          <div class="no-print mb-5 space-y-3 rounded-md border border-line bg-bg p-3 text-xs">
+            <p class="text-muted">${advice}${t.removed ? ` (se descartaron ${t.removed} frases que no encontré respaldadas en él)` : ''}.</p>
+            ${keywords.length ? `<div><p class="label mb-1">Encaja con la oferta</p><div class="flex flex-wrap gap-1">${chips(keywords, 'tag')}</div></div>` : ''}
+            ${gaps.length ? `<div><p class="label mb-1">La oferta pide y tu CV no muestra</p><div class="flex flex-wrap gap-1">${chips(gaps, 'tag-flag')}</div></div>` : ''}
+          </div>
+          <div id="cv-print">${content}</div>`;
+        setActions(true);
+      }
+
+      async function generate(kind: Kind) {
+        const j = jobs.find((x) => x.id === curId);
+        if (!j || !cv) return;
+        curKind = kind;
+        setTabs();
+        setActions(false);
+        const hit = results.get(cacheKey(kind, curId));
+        if (hit) return showResult(kind, hit);
+        const id = curId;
+        $('#tailor-body').innerHTML = `<p class="animate-pulse py-10 text-center text-sm text-muted">${kind === 'cv' ? 'adaptando tu CV' : 'escribiendo tu carta'} para esta oferta… (10–30 s)</p>`;
+        try {
+          const r = await fetch(kind === 'cv' ? '/api/tailor' : '/api/cover', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ cv: cv.text, job: { title: j.title, company: j.company, language: j.language, stack: j.stack, description: j.description ?? '' } }),
+          });
+          const data = await r.json();
+          if (!r.ok) throw new Error(data.error ?? `HTTP ${r.status}`);
+          results.set(cacheKey(kind, id), data);
+          if (curId === id && curKind === kind) showResult(kind, data); // user may have switched meanwhile
+        } catch (err) {
+          if (curId === id && curKind === kind) $('#tailor-body').innerHTML = `<p class="py-10 text-center text-sm text-red-400">${esc((err as Error).message)}</p>`;
+        }
+      }
+
+      function openTailor(id: string) {
+        const j = jobs.find((x) => x.id === id);
+        if (!j || !cv) return;
+        curId = id;
+        $('#tailor-title').textContent = `${j.title}${j.company ? ` · ${j.company}` : ''}`;
+        const dlg = $<HTMLDialogElement>('#tailor');
+        if (!dlg.open) dlg.showModal();
+        generate('cv');
+      }
+
+      document.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        const btn = target.closest<HTMLElement>('[data-tailor]');
+        if (btn) { e.preventDefault(); openTailor(btn.dataset.tailor!); return; }
+        const tab = target.closest<HTMLElement>('[data-tab]');
+        if (tab && tab.dataset.tab !== curKind) generate(tab.dataset.tab as Kind);
+      });
+      $('#tailor-close').addEventListener('click', () => $<HTMLDialogElement>('#tailor').close());
+      $<HTMLDialogElement>('#tailor').addEventListener('click', (e) => { if (e.target === e.currentTarget) (e.currentTarget as HTMLDialogElement).close(); });
+      $('#tailor-copy').addEventListener('click', async (e) => {
+        if (!currentText) return;
+        await navigator.clipboard.writeText(currentText);
+        const b = e.currentTarget as HTMLElement; b.textContent = 'copiado ✓'; setTimeout(() => (b.textContent = 'copiar'), 1500);
+      });
+      // Print through a dedicated document-style view (not the modal) so margins and type are right.
+      function mdToDoc(md: string) {
+        const inline = (t: string) => esc(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        const out: string[] = [];
+        let list = false;
+        const close = () => { if (list) { out.push('</ul>'); list = false; } };
+        for (const line of md.split('\n')) {
+          const entry = line.match(/^\*\*(.+?)\*\*\s*(?:\((.+)\))?\s*$/);
+          if (/^# /.test(line)) { close(); out.push(`<h1>${inline(line.slice(2))}</h1>`); }
+          else if (/^## /.test(line)) { close(); out.push(`<h2>${inline(line.slice(3))}</h2>`); }
+          else if (/^- /.test(line)) { if (!list) { out.push('<ul>'); list = true; } out.push(`<li>${inline(line.slice(2))}</li>`); }
+          else if (entry) { close(); out.push(`<p class="entry"><span>${inline(`**${entry[1]}**`)}</span>${entry[2] ? `<span class="when">${esc(entry[2])}</span>` : ''}</p>`); }
+          else if (line.trim()) { close(); out.push(`<p>${inline(line)}</p>`); }
+          else close();
+        }
+        close();
+        return out.join('');
+      }
+
+      $('#tailor-print').addEventListener('click', () => {
+        if (!currentText) return;
+        const j = jobs.find((x) => x.id === curId);
+        const person = (currentText.match(/^# (.+)$/m)?.[1] ?? currentText.split('\n').find((l) => /\S/.test(l) && !/^(Dear|Estimad)/.test(l)) ?? '').replace(/[,\n].*$/s, '').trim();
+        const root = $('#print-root');
+        root.innerHTML = curKind === 'cv'
+          ? `<article class="doc">${mdToDoc(currentText)}</article>`
+          : `<article class="doc letter">${currentText.split(/\n\n+/).map((p) => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join('')}</article>`;
+        const prevTitle = document.title;
+        // Browsers use the page title as the default PDF filename.
+        document.title = [curKind === 'cv' ? 'CV' : 'Carta', person, j?.company].filter(Boolean).join(' - ').replace(/[\\/:*?"<>|]+/g, '');
+        window.addEventListener('afterprint', () => { document.title = prevTitle; root.innerHTML = ''; }, { once: true });
+        window.print();
+      });
+
+      load();
+      renderCv();
+      syncPills();
+      render();
+    </script>
+  </body>
+</html>
