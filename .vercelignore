@@ -1,0 +1,7 @@
+# Never upload local secrets or caches with `vercel deploy`
+.env
+.env.*
+!.env.example
+.cache
+.vercel
+node_modules
