@@ -1,6 +1,6 @@
 # kairos
 
-Buscador minimalista de ofertas frontend. Sin servicios de pago: lee directamente los portales públicos y APIs abiertas.
+Buscador minimalista de ofertas de empleo. Sin servicios de pago: lee directamente los portales públicos y APIs abiertas.
 
 | Fuente | Países | Cómo |
 |---|---|---|

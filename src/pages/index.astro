@@ -15,7 +15,7 @@ const pills = (group: string, opts: Record<string, string>, withNone = false) =>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="dark" />
-    <title>kairos — ofertas frontend</title>
+    <title>kairos — ofertas de empleo</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%230a0a0a'/><rect x='3' y='3' width='4' height='4' fill='%23b6f23a'/></svg>" />
   </head>
   <body class="min-h-screen">
@@ -29,7 +29,7 @@ const pills = (group: string, opts: Record<string, string>, withNone = false) =>
         <form id="search" class="space-y-5">
           <div class="space-y-2">
             <label class="label" for="q">Búsqueda</label>
-            <input id="q" name="q" class="field" value="frontend" maxlength="60" autocomplete="off" />
+            <input id="q" name="q" class="field" value="" placeholder="ej. diseñador, contador, react" maxlength="60" autocomplete="off" />
           </div>
 
           <fieldset class="space-y-2">
@@ -206,7 +206,7 @@ const pills = (group: string, opts: Record<string, string>, withNone = false) =>
         countries: new Set(['MX', 'CO']),
         modality: new Set(), contract: new Set(), language: new Set(),
         seniority: new Set(), stack: new Set(), flags: new Set(),
-        days: '7', q: 'frontend', text: '', sort: 'match',
+        days: '7', q: '', text: '', sort: 'match',
       };
       let jobs: Job[] = [];
       const STORE = 'kairos:v1';
@@ -358,7 +358,8 @@ const pills = (group: string, opts: Record<string, string>, withNone = false) =>
       async function search() {
         const countries = [...state.countries] as CountryCode[];
         if (!countries.length) { $('#status').textContent = 'elige al menos un país'; return; }
-        state.q = $<HTMLInputElement>('#q').value.trim() || 'frontend';
+        state.q = $<HTMLInputElement>('#q').value.trim();
+        if (!state.q) { $('#status').textContent = 'escribe qué trabajo buscas'; return; }
         save();
 
         const targets = (Object.keys(SOURCE_COUNTRIES) as Source[]).flatMap((s) =>
