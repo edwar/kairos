@@ -14,7 +14,7 @@ export const prerender = false;
 
 const TTL = Number(import.meta.env?.CACHE_TTL_MIN ?? process.env.CACHE_TTL_MIN ?? 30) * 60_000; // same search within the TTL is served from cache
 // Bump when filtering/extraction logic changes so stale cached results are ignored.
-const CACHE_VERSION = 11;
+const CACHE_VERSION = 12;
 // Vercel's filesystem is read-only except /tmp (ephemeral per instance); locally it persists in .cache/.
 const CACHE_DIR = process.env.VERCEL ? join(tmpdir(), 'kairos-search') : join(process.cwd(), '.cache', 'search');
 const cache = new Map<string, { at: number; jobs: Job[] }>(); // memory layer in front of the disk cache

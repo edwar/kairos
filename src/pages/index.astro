@@ -68,6 +68,7 @@ const pills = (group: string, opts: Record<string, string>, withNone = false) =>
             </label>
             <button type="button" id="cv-clear" class="hidden text-xs text-muted underline-offset-4 hover:text-fg hover:underline">quitar</button>
           </div>
+          <button type="button" id="chat-open" class="hidden text-xs text-fg underline-offset-4 hover:text-accent hover:underline">responder preguntas de postulación →</button>
           <p class="text-[11px] leading-snug text-muted">Se guarda solo en tu navegador. Al adaptar una oferta se envía el texto a Groq, sin email, teléfono ni enlaces.</p>
         </div>
 
@@ -147,6 +148,29 @@ const pills = (group: string, opts: Record<string, string>, withNone = false) =>
     </main>
 
     <div id="print-root" aria-hidden="true"></div>
+
+    <dialog id="chat" class="m-auto w-[min(760px,94vw)] rounded-lg border border-line-strong bg-panel p-0 text-fg backdrop:bg-black/70">
+      <div class="flex items-start justify-between gap-4 border-b border-line p-4">
+        <div class="min-w-0">
+          <p class="label">Preguntas de postulación</p>
+          <p id="chat-context" class="mt-1 truncate text-xs text-muted"></p>
+        </div>
+        <div class="flex shrink-0 gap-4 text-xs">
+          <button type="button" id="chat-clear" class="text-muted underline-offset-4 hover:text-fg hover:underline">limpiar</button>
+          <button type="button" id="chat-close" class="text-muted hover:text-fg">cerrar ✕</button>
+        </div>
+      </div>
+      <div id="chat-log" class="max-h-[54vh] min-h-[180px] space-y-4 overflow-y-auto p-5"></div>
+      <form id="chat-form" class="space-y-2 border-t border-line p-4">
+        <textarea id="chat-input" rows="3" class="field resize-none" placeholder="Pega aquí la pregunta del formulario, o cuéntame algo que falte en tu CV…"></textarea>
+        <div class="flex items-center justify-between gap-3">
+          <label class="flex items-center gap-2 text-xs text-muted">Máx. caracteres
+            <input id="chat-max" type="number" min="50" max="3000" value="500" class="field w-20 py-1 text-xs" />
+          </label>
+          <button type="submit" id="chat-send" class="rounded-md bg-fg px-4 py-1.5 font-pixel text-xs text-bg hover:opacity-85 disabled:opacity-40">responder</button>
+        </div>
+      </form>
+    </dialog>
 
     <dialog id="tailor" class="m-auto w-[min(860px,94vw)] rounded-lg border border-line-strong bg-panel p-0 text-fg backdrop:bg-black/70">
       <div class="no-print flex items-start justify-between gap-4 border-b border-line p-4">
@@ -311,7 +335,7 @@ const pills = (group: string, opts: Record<string, string>, withNone = false) =>
                   <span class="label">${esc(ago(j.postedAt))} · ${j.source}</span>
                 </div>
               </a>
-              ${cv ? `<div class="-mt-2 pb-3"><button type="button" data-tailor="${esc(j.id)}" class="text-xs text-muted underline-offset-4 transition-colors hover:text-accent hover:underline">adaptar CV y carta →</button></div>` : ''}
+              ${cv ? `<div class="-mt-2 flex gap-5 pb-3"><button type="button" data-tailor="${esc(j.id)}" class="text-xs text-muted underline-offset-4 transition-colors hover:text-accent hover:underline">adaptar CV y carta →</button><button type="button" data-ask="${esc(j.id)}" class="text-xs text-muted underline-offset-4 transition-colors hover:text-accent hover:underline">responder preguntas →</button></div>` : ''}
             </li>`;
           })
           .join('');
@@ -442,6 +466,7 @@ const pills = (group: string, opts: Record<string, string>, withNone = false) =>
 
       function renderCv() {
         profile = cv ? profileFromCv(cv.text) : null;
+        $('#chat-open').classList.toggle('hidden', !cv);
         $('#sort-box').classList.toggle('hidden', !cv);
         $('#sort-box').classList.toggle('flex', Boolean(cv));
         syncSort();
@@ -609,6 +634,107 @@ const pills = (group: string, opts: Record<string, string>, withNone = false) =>
         window.addEventListener('afterprint', () => { document.title = prevTitle; root.innerHTML = ''; }, { once: true });
         window.print();
       });
+
+      // ───── Application-question chat ─────
+      type ChatMsg = { role: 'user' | 'assistant'; content: string };
+      let chatJobId: string | null = null;
+      let chatHistory: ChatMsg[] = [];
+      let chatBusy = false;
+
+      function chatContext() {
+        const j = chatJobId ? jobs.find((x) => x.id === chatJobId) : null;
+        $('#chat-context').textContent = j ? `Oferta: ${j.title}${j.company ? ` · ${j.company}` : ''}` : 'Sin oferta concreta: responderé solo con tu CV';
+      }
+      function chatEmpty() {
+        $('#chat-log').innerHTML = '<p class="py-8 text-center text-sm text-muted">Pega una pregunta del formulario y te doy una respuesta para copiar.<br>Si te falta un dato, cuéntamelo aquí y actualizo la respuesta.</p>';
+      }
+      function openChat(jobId: string | null) {
+        if (!cv) return;
+        if (jobId !== chatJobId) { chatHistory = []; chatEmpty(); }
+        chatJobId = jobId;
+        chatContext();
+        const dlg = $<HTMLDialogElement>('#chat');
+        if (!dlg.open) dlg.showModal();
+        $<HTMLTextAreaElement>('#chat-input').focus();
+      }
+      function bubble(role: 'user' | 'assistant', html: string) {
+        const log = $('#chat-log');
+        if (log.querySelector('p.py-8')) log.innerHTML = '';
+        const el = document.createElement('div');
+        el.className = role === 'user' ? 'ml-10 rounded-md border border-line bg-bg p-3 text-sm' : 'mr-4 space-y-2';
+        el.innerHTML = html;
+        log.append(el);
+        log.scrollTop = log.scrollHeight;
+        return el;
+      }
+
+      async function sendChat() {
+        const input = $<HTMLTextAreaElement>('#chat-input');
+        const question = input.value.trim();
+        if (!question || chatBusy || !cv) return;
+        // Forms usually state their own limit: "(máximo 500 caracteres)".
+        const limit = question.match(/m[aá]x(?:imo)?\.?\s*(?:de\s*)?(\d{2,4})\s*caracteres|max(?:imum)?\s*(\d{2,4})\s*char/i);
+        if (limit) $<HTMLInputElement>('#chat-max').value = limit[1] ?? limit[2];
+        const maxChars = Number($<HTMLInputElement>('#chat-max').value) || 500;
+
+        bubble('user', esc(question).replace(/\n/g, '<br>'));
+        input.value = '';
+        chatBusy = true;
+        $<HTMLButtonElement>('#chat-send').disabled = true;
+        const wait = bubble('assistant', '<p class="animate-pulse text-sm text-muted">escribiendo la respuesta…</p>');
+        const j = chatJobId ? jobs.find((x) => x.id === chatJobId) : null;
+        try {
+          const r = await fetch('/api/answer', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              cv: cv.text, question, maxChars, history: chatHistory.slice(-8),
+              job: j ? { title: j.title, company: j.company, description: j.description ?? '' } : null,
+            }),
+          });
+          const data = await r.json();
+          if (!r.ok) throw new Error(data.error ?? `HTTP ${r.status}`);
+          chatHistory.push({ role: 'user', content: question }, { role: 'assistant', content: data.answer });
+          const over = data.chars > data.maxChars;
+          wait.innerHTML = `
+            <div class="whitespace-pre-wrap rounded-md border border-line-strong p-3 text-sm leading-relaxed" data-answer>${esc(data.answer)}</div>
+            <div class="flex items-center justify-between gap-3 text-xs">
+              <span class="${over ? 'text-red-400' : 'text-muted'}">${data.chars}/${data.maxChars} caracteres</span>
+              <button type="button" data-copy class="rounded-md border border-line-strong px-3 py-1 font-pixel text-[11px] text-fg hover:border-fg">copiar</button>
+            </div>
+            ${data.missing?.length ? `<p class="text-xs text-muted"><span class="label">No consta en tu CV</span> ${esc(data.missing.join(', '))}. Si los has usado, dímelo y actualizo la respuesta.</p>` : ''}
+            ${(data.warnings ?? []).map((w: string) => `<p class="text-xs text-red-400">⚑ ${esc(w)}</p>`).join('')}`;
+        } catch (err) {
+          wait.innerHTML = `<p class="text-sm text-red-400">${esc((err as Error).message)}</p>`;
+        } finally {
+          chatBusy = false;
+          $<HTMLButtonElement>('#chat-send').disabled = false;
+          $('#chat-log').scrollTop = $('#chat-log').scrollHeight;
+          input.focus();
+        }
+      }
+
+      $('#chat-form').addEventListener('submit', (e) => { e.preventDefault(); sendChat(); });
+      $('#chat-input').addEventListener('keydown', (e) => {
+        const k = e as KeyboardEvent;
+        if (k.key === 'Enter' && !k.shiftKey && !k.isComposing) { k.preventDefault(); sendChat(); }
+      });
+      $('#chat-open').addEventListener('click', () => openChat(null));
+      $('#chat-close').addEventListener('click', () => $<HTMLDialogElement>('#chat').close());
+      $('#chat-clear').addEventListener('click', () => { chatHistory = []; chatEmpty(); });
+      $<HTMLDialogElement>('#chat').addEventListener('click', (e) => { if (e.target === e.currentTarget) (e.currentTarget as HTMLDialogElement).close(); });
+      document.addEventListener('click', async (e) => {
+        const t = e.target as HTMLElement;
+        const ask = t.closest<HTMLElement>('[data-ask]');
+        if (ask) { e.preventDefault(); openChat(ask.dataset.ask!); return; }
+        const copy = t.closest<HTMLElement>('[data-copy]');
+        if (copy) {
+          const text = copy.closest('div.mr-4')?.querySelector<HTMLElement>('[data-answer]')?.textContent ?? '';
+          await navigator.clipboard.writeText(text);
+          copy.textContent = 'copiado ✓'; setTimeout(() => (copy.textContent = 'copiar'), 1500);
+        }
+      });
+      chatEmpty();
 
       load();
       renderCv();
