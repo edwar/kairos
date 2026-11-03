@@ -58,6 +58,12 @@ body {
   .tag {
     @apply rounded border border-line px-1.5 py-0.5 text-[11px] text-muted;
   }
+  .sort-opt {
+    @apply cursor-pointer text-xs text-muted underline-offset-4 transition-colors hover:text-fg;
+  }
+  .sort-opt[aria-pressed="true"] {
+    @apply text-fg underline;
+  }
   .tab {
     @apply cursor-pointer rounded-md border border-line-strong px-3 py-1 text-xs text-muted transition-colors hover:text-fg;
   }

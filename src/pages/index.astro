@@ -118,7 +118,6 @@ const pills = (group: string, opts: Record<string, string>, withNone = false) =>
               <button type="button" class="pill" data-value="stack" aria-pressed="false">Stack indicado</button>
               <button type="button" class="pill" data-value="redflags" aria-pressed="false">Con red flags</button>
               <button type="button" class="pill" data-value="clean" aria-pressed="false">Sin red flags</button>
-              <button type="button" id="sort-match" class="pill hidden" data-value="bymatch" aria-pressed="false">Más compatibles primero</button>
             </div>
           </fieldset>
 
@@ -135,6 +134,11 @@ const pills = (group: string, opts: Record<string, string>, withNone = false) =>
         <div class="mb-3 flex items-center justify-between">
           <p id="count" class="label"></p>
           <div id="sources" class="flex flex-wrap justify-end gap-x-3 gap-y-1"></div>
+        </div>
+        <div id="sort-box" class="mb-3 hidden items-center gap-3 text-xs text-muted">
+          <span class="label">Ordenar por</span>
+          <button type="button" data-sort="match" aria-pressed="true" class="sort-opt">compatibilidad</button>
+          <button type="button" data-sort="date" aria-pressed="false" class="sort-opt">fecha</button>
         </div>
         <p id="hidden" class="mb-3 hidden text-xs text-muted"></p>
         <ul id="results" class="divide-y divide-line border-y border-line"></ul>
@@ -174,11 +178,11 @@ const pills = (group: string, opts: Record<string, string>, withNone = false) =>
 
       // ───── state ─────
       type Multi = 'countries' | 'modality' | 'contract' | 'language' | 'seniority' | 'stack' | 'flags';
-      const state: Record<Multi, Set<string>> & { days: string; q: string; text: string } = {
+      const state: Record<Multi, Set<string>> & { days: string; q: string; text: string; sort: 'match' | 'date' } = {
         countries: new Set(['MX', 'CO']),
         modality: new Set(), contract: new Set(), language: new Set(),
         seniority: new Set(), stack: new Set(), flags: new Set(),
-        days: '7', q: 'frontend', text: '',
+        days: '7', q: 'frontend', text: '', sort: 'match',
       };
       let jobs: Job[] = [];
       const STORE = 'kairos:v1';
@@ -271,7 +275,7 @@ const pills = (group: string, opts: Record<string, string>, withNone = false) =>
         const byDate = (a: Job, b: Job) => (b.postedAt ?? '').localeCompare(a.postedAt ?? '');
         const matches = new Map<string, Match>();
         if (profile) jobs.forEach((j) => matches.set(j.id, matchJob(j, profile!)));
-        const sortByMatch = Boolean(profile) && state.flags.has('bymatch');
+        const sortByMatch = Boolean(profile) && state.sort === 'match'; // best match first whenever a CV is loaded
         const list = jobs.filter(passes).sort((a, b) =>
           sortByMatch ? (matches.get(b.id)?.score ?? -1) - (matches.get(a.id)?.score ?? -1) || byDate(a, b) : byDate(a, b));
         $('#count').textContent = jobs.length ? `${list.length} de ${jobs.length} ofertas` : '';
@@ -426,9 +430,21 @@ const pills = (group: string, opts: Record<string, string>, withNone = false) =>
 
       let profile: CvProfile | null = null;
 
+      function syncSort() {
+        document.querySelectorAll<HTMLElement>('[data-sort]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.sort === state.sort)));
+      }
+      document.addEventListener('click', (e) => {
+        const b = (e.target as HTMLElement).closest<HTMLElement>('[data-sort]');
+        if (!b) return;
+        state.sort = b.dataset.sort as 'match' | 'date';
+        syncSort(); render();
+      });
+
       function renderCv() {
         profile = cv ? profileFromCv(cv.text) : null;
-        $('#sort-match').classList.toggle('hidden', !cv);
+        $('#sort-box').classList.toggle('hidden', !cv);
+        $('#sort-box').classList.toggle('flex', Boolean(cv));
+        syncSort();
         $('#cv-status').textContent = cv ? `${cv.name} · ${cv.text.length.toLocaleString('es')} caracteres` : 'Sube tu CV en PDF para adaptarlo a cada oferta.';
         $('#cv-clear').classList.toggle('hidden', !cv);
         $('#cv-label').textContent = cv ? 'cambiar PDF' : 'subir PDF';
